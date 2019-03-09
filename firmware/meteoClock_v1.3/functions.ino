@@ -1,3 +1,13 @@
+void clearScreen() {
+#ifdef LCD_DISPLAY
+  lcd.clear();
+#endif
+
+#ifdef OLED_DISPLAY
+  display.clearDisplay();
+#endif
+}
+
 void modesTick() {
   button.tick();
   boolean changeFlag = false;
@@ -18,13 +28,13 @@ void modesTick() {
 
   if (changeFlag) {
     if (mode == 0) {
-      lcd.clear();
+      clearScreen();
       loadClock();
       drawClock(hrs, mins, 0, 0, 1);
-      if (DISPLAY_TYPE == 1) drawData();
+      if (LCD_DISPLAY_TYPE == 1) drawData();
       drawSensors();
-    } else {
-      lcd.clear();
+    } else {    
+      clearScreen();
       loadPlot();
       redrawPlot();
     }
@@ -32,7 +42,7 @@ void modesTick() {
 }
 
 void redrawPlot() {
-  lcd.clear();
+  clearScreen();
   switch (mode) {
     case 1: drawPlot(0, 3, 15, 4, TEMP_MIN, TEMP_MAX, (int*)tempHour, "t hr");
       break;
@@ -68,7 +78,8 @@ void readSensors() {
 }
 
 void drawSensors() {
-#if (DISPLAY_TYPE == 1)
+#ifdef LCD_DISPLAY
+#if (LCD_DISPLAY_TYPE == 1)
   // дисплей 2004
   lcd.setCursor(0, 2);
   lcd.print(String(dispTemp, 1));
@@ -103,6 +114,34 @@ void drawSensors() {
   lcd.setCursor(0, 1);
   lcd.print(String(dispPres) + " mm  rain ");
   lcd.print(String(dispRain) + "% ");
+#endif
+#endif
+
+#ifdef OLED_DISPLAY
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+
+  display.setCursor(0,0);
+  // температура и влажность
+  display.print(String(dispTemp, 1));
+  display.print((char)223);
+  display.print(" " + String(dispHum) + "%  ");
+
+  // co2
+#if (CO2_SENSOR == 1)
+  display.print(String(dispCO2) + " ppm");
+  if (dispCO2 < 1000) display.print(" ");
+#endif
+
+  // давление и вероятность дождя
+  display.setCursor(0, 10);
+  display.print(String(dispPres) + " mm  rain ");
+  //display.print(F("       "));
+  //display.setCursor(13, 3);
+  display.print(String(dispRain) + "%");
+
+  display.display();
 #endif
 }
 
@@ -204,12 +243,14 @@ void clockTick() {
       if (hrs > 23) {
         hrs = 0;
       }
-      if (mode == 0 && DISPLAY_TYPE) drawData();
+      if (mode == 0 && LCD_DISPLAY_TYPE) drawData();
     }
     if (DISP_MODE == 2 && mode == 0) {
+#ifdef LCD_DISPLAY
       lcd.setCursor(16, 1);
       if (secs < 10) lcd.print(" ");
       lcd.print(secs);
+#endif
     }
   }
   if (mode == 0) drawdots(7, 0, dotFlag);

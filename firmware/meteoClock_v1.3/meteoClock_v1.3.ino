@@ -23,6 +23,9 @@
   - Исправлен прогноз погоды
 */
 
+// #define LCD_DISPLAY
+#define OLED_DISPLAY
+
 // ------------------------- НАСТРОЙКИ --------------------
 #define RESET_CLOCK 0     // сброс часов на время загрузки прошивки (для модуля с несъёмной батарейкой). Не забудь поставить 0 и прошить ещё раз!
 #define SENS_TIME 30000   // время обновления показаний сенсоров на экране, миллисекунд
@@ -30,12 +33,18 @@
 #define LED_BRIGHT 255    // яркость светодиода СО2 (0 - 255)
 #define BLUE_YELLOW 1     // жёлтый цвет вместо синего (1 да, 0 нет) но из за особенностей подключения жёлтый не такой яркий
 #define DISP_MODE 1       // в правом верхнем углу отображать: 0 - год, 1 - день недели, 2 - секунды
-#define WEEK_LANG 1       // язык дня недели: 0 - английский, 1 - русский (транслит)
-#define DEBUG 0           // вывод на дисплей лог инициализации датчиков при запуске. Для дисплея 1602 не работает! Но дублируется через порт!
+#define WEEK_LANG 0       // язык дня недели: 0 - английский, 1 - русский (транслит)
+#define DEBUG 1           // вывод на дисплей лог инициализации датчиков при запуске. Для дисплея 1602 не работает! Но дублируется через порт!
 #define PRESSURE 1        // 0 - график давления, 1 - график прогноза дождя (вместо давления). Не забудь поправить пределы гроафика
 #define CO2_SENSOR 1      // включить или выключить поддержку/вывод с датчика СО2 (1 вкл, 0 выкл)
-#define DISPLAY_TYPE 1    // тип дисплея: 1 - 2004 (большой), 0 - 1602 (маленький)
-#define DISPLAY_ADDR 0x27 // адрес платы дисплея: 0x27 или 0x3f. Если дисплей не работает - смени адрес! На самом дисплее адрес не указан
+#define LCD_DISPLAY_TYPE 1  // тип дисплея: 1 - 2004 (большой), 0 - 1602 (маленький)
+#define LCD_DISPLAY_ADDR 0x27 // адрес платы дисплея: 0x27 или 0x3f. Если дисплей не работает - смени адрес! На самом дисплее адрес не указан
+#define OLED_DISPLAY_ADDR 0x3C // или 0x3D
+// I2C device found at address 0x27  ! 2004 display
+// I2C device found at address 0x3C  ! SSD1306 Graphics Chip (128x64 SSD1306 OLED display)
+// I2C device found at address 0x68  ! real time clocks
+// I2C device found at address 0x76  ! BME280 sensor
+// see https://learn.adafruit.com/i2c-addresses/the-list
 
 // пределы отображения для графиков
 #define TEMP_MIN 15
@@ -66,12 +75,24 @@
 
 // библиотеки
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 
-#if (DISPLAY_TYPE == 1)
-LiquidCrystal_I2C lcd(DISPLAY_ADDR, 20, 4);
+#ifdef LCD_DISPLAY
+#include <LiquidCrystal_I2C.h>
+#endif
+
+#ifdef OLED_DISPLAY
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define OLED_RESET -1
+Adafruit_SSD1306 display(OLED_RESET);
+#endif
+
+#ifdef LCD_DISPLAY
+#if (LCD_DISPLAY_TYPE == 1)
+LiquidCrystal_I2C lcd(LCD_DISPLAY_ADDR, 20, 4);
 #else
-LiquidCrystal_I2C lcd(DISPLAY_ADDR, 16, 2);
+LiquidCrystal_I2C lcd(LCD_DISPLAY_ADDR, 16, 2);
+#endif
 #endif
 
 #include "RTClib.h"
@@ -154,6 +175,7 @@ uint8_t UMB[8] = {0b11111,  0b11111,  0b11111,  0b00000,  0b00000,  0b00000,  0b
 uint8_t LMB[8] = {0b11111,  0b00000,  0b00000,  0b00000,  0b00000,  0b11111,  0b11111,  0b11111};
 
 void drawDig(byte dig, byte x, byte y) {
+#ifdef LCD_DISPLAY
   switch (dig) {
     case 0:
       lcd.setCursor(x, y); // set cursor to column 0, line 0 (first row)
@@ -258,9 +280,11 @@ void drawDig(byte dig, byte x, byte y) {
       lcd.write(32);
       break;
   }
+#endif
 }
 
 void drawdots(byte x, byte y, boolean state) {
+#ifdef LCD_DISPLAY
   byte code;
   if (state) code = 165;
   else code = 32;
@@ -268,14 +292,17 @@ void drawdots(byte x, byte y, boolean state) {
   lcd.write(code);
   lcd.setCursor(x, y + 1);
   lcd.write(code);
+#endif
 }
 
 void drawClock(byte hours, byte minutes, byte x, byte y, boolean dotState) {
+#ifdef LCD_DISPLAY
   // чисти чисти!
   lcd.setCursor(x, y);
   lcd.print("               ");
   lcd.setCursor(x, y + 1);
   lcd.print("               ");
+#endif
 
   //if (hours > 23 || minutes > 59) return;
   if (hours / 10 == 0) drawDig(10, x, y);
@@ -288,13 +315,13 @@ void drawClock(byte hours, byte minutes, byte x, byte y, boolean dotState) {
 
 #if (WEEK_LANG == 0)
 static const char *dayNames[]  = {
-  "Sund",
-  "Mond",
-  "Tues",
-  "Wedn",
-  "Thur",
-  "Frid",
-  "Satu",
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
 };
 #else
 static const char *dayNames[]  = {
@@ -309,6 +336,7 @@ static const char *dayNames[]  = {
 #endif
 
 void drawData() {
+#ifdef LCD_DISPLAY
   lcd.setCursor(15, 0);
   if (now.day() < 10) lcd.print(0);
   lcd.print(now.day());
@@ -324,9 +352,11 @@ void drawData() {
     int dayofweek = now.dayOfTheWeek();
     lcd.print(dayNames[dayofweek]);
   }
+#endif
 }
 
 void drawPlot(byte pos, byte row, byte width, byte height, int min_val, int max_val, int *plot_array, String label) {
+#ifdef LCD_DISPLAY
   int max_value = -32000;
   int min_value = 32000;
 
@@ -367,9 +397,11 @@ void drawPlot(byte pos, byte row, byte width, byte height, int min_val, int max_
       }
     }
   }
+#endif
 }
 
 void loadClock() {
+#ifdef LCD_DISPLAY
   lcd.createChar(0, LT);
   lcd.createChar(1, UB);
   lcd.createChar(2, RT);
@@ -378,9 +410,11 @@ void loadClock() {
   lcd.createChar(5, LR);
   lcd.createChar(6, UMB);
   lcd.createChar(7, LMB);
+#endif
 }
 
 void loadPlot() {
+#ifdef LCD_DISPLAY
   lcd.createChar(0, row8);
   lcd.createChar(1, row1);
   lcd.createChar(2, row2);
@@ -389,6 +423,7 @@ void loadPlot() {
   lcd.createChar(5, row5);
   lcd.createChar(6, row6);
   lcd.createChar(7, row7);
+#endif
 }
 
 #if (LED_MODE == 0)
@@ -436,11 +471,31 @@ void setup() {
 
   digitalWrite(LED_COM, LED_MODE);
 
+
+#ifdef OLED_DISPLAY
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_DISPLAY_ADDR)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    //for(;;); // Don't proceed, loop forever
+  }
+  display.cp437(true);
+  display.clearDisplay();
+#if (DEBUG == 1)
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(0,0);
+  display.print(F("MeteoClock v1.4")); 
+  display.display();
+  delay(500);
+#endif
+#endif
+
+#ifdef LCD_DISPLAY
   lcd.init();
   lcd.backlight();
   lcd.clear();
 
-#if (DEBUG == 1 && DISPLAY_TYPE == 1)
+#if (DEBUG == 1 && LCD_DISPLAY_TYPE == 1)
   boolean status = true;
 
   setLED(1);
@@ -513,6 +568,14 @@ void setup() {
   rtc.begin();
   bme.begin(&Wire);
 #endif
+#else
+#if (CO2_SENSOR == 1)
+  mhz19.begin(MHZ_TX, MHZ_RX);
+  mhz19.setAutoCalibration(false);
+#endif
+  rtc.begin();
+  bme.begin(&Wire);
+#endif
 
   bme.setSampling(Adafruit_BME280::MODE_FORCED,
                   Adafruit_BME280::SAMPLING_X1, // temperature
@@ -535,7 +598,7 @@ void setup() {
     time_array[i] = i;             // забить массив времени числами 0 - 5
   }
 
-  if (DISPLAY_TYPE == 1) {
+  if (LCD_DISPLAY_TYPE == 1) {
     loadClock();
     drawClock(hrs, mins, 0, 0, 1);
     drawData();
@@ -547,7 +610,7 @@ void setup() {
 void loop() {
   if (sensorsTimer.isReady()) readSensors();    // читаем показания датчиков с периодом SENS_TIME
 
-#if (DISPLAY_TYPE == 1)
+#if (LCD_DISPLAY_TYPE == 1)
   if (clockTimer.isReady()) clockTick();        // два раза в секунду пересчитываем время и мигаем точками
   plotSensorsTick();                            // тут внутри несколько таймеров для пересчёта графиков (за час, за день и прогноз)
   modesTick();                                  // тут ловим нажатия на кнопку и переключаем режимы
