@@ -153,6 +153,7 @@ uint32_t sumX, sumY, sumX2, sumXY;
 float a, b;
 byte time_array[6];
 
+#ifdef LCD_DISPLAY
 // символы
 // график
 byte row8[8] = {0b11111,  0b11111,  0b11111,  0b11111,  0b11111,  0b11111,  0b11111,  0b11111};
@@ -173,6 +174,7 @@ uint8_t LB[8] = {0b00000,  0b00000,  0b00000,  0b00000,  0b00000,  0b11111,  0b1
 uint8_t LR[8] = {0b11111,  0b11111,  0b11111,  0b11111,  0b11111,  0b11111,  0b11110,  0b11100};
 uint8_t UMB[8] = {0b11111,  0b11111,  0b11111,  0b00000,  0b00000,  0b00000,  0b11111,  0b11111};
 uint8_t LMB[8] = {0b11111,  0b00000,  0b00000,  0b00000,  0b00000,  0b11111,  0b11111,  0b11111};
+#endif
 
 void drawDig(byte dig, byte x, byte y) {
 #ifdef LCD_DISPLAY
@@ -311,6 +313,28 @@ void drawClock(byte hours, byte minutes, byte x, byte y, boolean dotState) {
   // тут должны быть точки. Отдельной функцией
   drawDig(minutes / 10, x + 8, y);
   drawDig(minutes % 10, x + 12, y);
+
+#ifdef OLED_DISPLAY
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+
+  display.fillRect(0, 20, 128, 30, BLACK);
+
+  display.setCursor(0, 20);
+  if (hours<10) {    
+    display.print("0");
+  }
+  display.print(String(hours));  
+  display.print(":");
+  if (minutes<10) {    
+    display.print("0");
+  }
+  display.print(String(minutes));
+
+  display.display();
+
+  drawData();
+#endif
 }
 
 #if (WEEK_LANG == 0)
@@ -352,6 +376,23 @@ void drawData() {
     int dayofweek = now.dayOfTheWeek();
     lcd.print(dayNames[dayofweek]);
   }
+#endif
+
+#ifdef OLED_DISPLAY
+  //display.setTextColor(WHITE);
+  //display.setTextSize(1);
+
+  display.setCursor(40, 20);
+  if (now.day() < 10) display.print("0");
+  display.print(String(now.day()));
+  display.print(".");
+  if (now.month() < 10) display.print("0");
+  display.print(String(now.month()));
+  display.print(" ");
+  //int dayofweek = now.dayOfTheWeek();
+  //display.print(dayNames[dayofweek]);
+  
+  display.display();
 #endif
 }
 

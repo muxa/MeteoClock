@@ -4,7 +4,7 @@ void clearScreen() {
 #endif
 
 #ifdef OLED_DISPLAY
-  display.clearDisplay();
+  // display.clearDisplay();
 #endif
 }
 
@@ -118,7 +118,8 @@ void drawSensors() {
 #endif
 
 #ifdef OLED_DISPLAY
-  display.clearDisplay();
+  display.fillRect(0, 0, 128, 20, BLACK);
+
   display.setTextColor(WHITE);
   display.setTextSize(1);
 
